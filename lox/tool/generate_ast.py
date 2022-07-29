@@ -10,6 +10,10 @@ def main():
       "Literal  : Object value",
       "Unary    : Token operator, Expr right"
     ])
+    define_ast(output_dir, "Stmt", [
+      "Expression   : Expr expression",
+      "Print        : Expr expression"
+    ])
 
 def define_ast(output_dir, base_name, types):
     path = base_name + ".py"

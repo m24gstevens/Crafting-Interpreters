@@ -6,7 +6,6 @@ def main():
         print("Usage: pylox [script]")
         sys.exit(1)
     elif len(sys.argv) == 2:
-        print("Hi")
         pylox.run_file(sys.argv[1])
     else:
         pylox.run_prompt()

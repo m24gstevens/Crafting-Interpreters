@@ -1,5 +1,6 @@
 from _token import *
 from expr import *
+from stmt import *
 
 class Parser:
     def __init__(self, tokens):
@@ -7,10 +8,25 @@ class Parser:
         self.current = 0
 
     def parse(self):
-        try:
-            return self.expression()
-        except ParseError:
-            return None
+        statements = []
+        while not self.is_at_end():
+            statements.append(self.statement())
+        return statements
+        
+    def statement(self):
+        if self.match(PRINT):
+            return self.print_statement()
+        return self.expression_statement()
+
+    def print_statement(self):
+        value = self.expression()
+        self.consume(SEMICOLON, "Expected ';' after value.")
+        return Print(value)
+    
+    def expression_statement(self):
+        expr = self.expression()
+        self.consume(SEMICOLON, "Expected ';' after expression.")
+        return Expression(expr)
     
     def expression(self):
         return self.equality()
