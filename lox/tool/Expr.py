@@ -68,11 +68,11 @@ class Variable(Expr):
 	def accept(self, visitor):
 		return visitor.visitVariableExpr(self)
 
-class FunctionExpr(Expr):
-	def __init__(self,parameters,body):
-		self.parameters = parameters
+class FunctionExpression(Expr):
+	def __init__(self,params,body):
+		self.parameters = params
 		self.body = body
 
 	def accept(self, visitor):
-		return visitor.visitFunctionExprExpr(self)
+		return visitor.visitFunctionExpressionExpr(self)
 

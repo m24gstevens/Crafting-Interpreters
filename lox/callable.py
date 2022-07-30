@@ -5,7 +5,8 @@ class LoxCallable:
     pass
 
 class LoxFunction(LoxCallable):
-    def __init__(self, decl, closure):
+    def __init__(self, name, decl, closure):
+        self.name = name
         self.closure = closure
         self.declaration = decl
 
@@ -23,4 +24,6 @@ class LoxFunction(LoxCallable):
         return len(self.declaration.params)
 
     def __str__(self):
-        return "<fn " + self.declaration.name.lexeme + ">"
+        if self.name is None:
+            return "<fn>"
+        return "<fn " + self.name + ">"

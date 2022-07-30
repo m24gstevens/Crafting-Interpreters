@@ -170,6 +170,9 @@ class Parser:
 
     def function(self, kind):
         name = self.consume(IDENTIFIER, f"Expect {kind} name.")
+        return Function(name, self.function_body(kind))
+
+    def function_body(self, kind):
         self.consume(LEFT_PAREN, f"Expect '(' after {kind} name.")
         parameters = []
         if not self.check(RIGHT_PAREN):
@@ -181,11 +184,12 @@ class Parser:
         self.consume(RIGHT_PAREN, "Expect ')' after parameters.")
         self.consume(LEFT_BRACE, "Expect '{' before " + kind + " body")
         body = self.block()
-        return Function(name, parameters, body)
+        return FunctionExpression(parameters, body)
 
     def declaration(self):
         try:
-            if self.match(FUN):
+            if self.check(FUN) and self.check_next(IDENTIFIER):
+                self.consume(FUN, None)
                 return self.function("function")
             if self.match(VAR):
                 return self.var_declaration()
@@ -261,6 +265,8 @@ class Parser:
             return Literal(None)
         if self.match(NUMBER, STRING):
             return Literal(self.previous().literal)
+        if self.match(FUN):
+            return self.function_body("function")
         if self.match(IDENTIFIER):
             return Variable(self.previous())
         if self.match(LEFT_PAREN):
@@ -282,6 +288,13 @@ class Parser:
         if self.is_at_end():
             return False
         return self.peek().type == type
+
+    def check_next(self, type):
+        if self.is_at_end():
+            return False
+        if self.tokens[self.current + 1].type == EOF:
+            return False
+        return self.tokens[self.current + 1].type == type
     
     def advance(self):
         if not self.is_at_end():

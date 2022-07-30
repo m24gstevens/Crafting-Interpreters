@@ -25,10 +25,9 @@ class Expression(Stmt):
 		return visitor.visitExpressionStmt(self)
 
 class Function(Stmt):
-	def __init__(self,name,params,body):
+	def __init__(self,name,function):
 		self.name = name
-		self.params = params
-		self.body = body
+		self.function = function
 
 	def accept(self, visitor):
 		return visitor.visitFunctionStmt(self)

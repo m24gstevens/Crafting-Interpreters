@@ -3,6 +3,7 @@ from _token import Scanner, EOF
 from _parser import Parser
 from ast_printer import AstPrinter
 from interpreter import Interpreter
+from resolver import Resolver
 from expr import Expr
 
 had_error = False
@@ -41,6 +42,10 @@ def run(source):
     tokens = scanner.scan_tokens()
     parser = Parser(tokens)
     statements = parser.parse()
+    if had_error:
+        return
+    resolver = Resolver(interpreter)
+    resolver.resolve(statements)
     if had_error:
         return
     interpreter.interpret(statements)
