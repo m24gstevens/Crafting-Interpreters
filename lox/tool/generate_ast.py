@@ -10,6 +10,7 @@ def main():
       "Call     : Expr callee, Token paren, list arguments",
       "Get      : Expr object, Token name",
       "Set      : Expr object, Token name, Expr value",
+      "Super    : Token keyword, Token method",
       "This     : Token keyword",
       "Grouping : Expr expression",
       "Literal  : Object value",
@@ -20,7 +21,7 @@ def main():
     ])
     define_ast(output_dir, "Stmt", [
       "Block        : list statements",
-      "Class        : Token name, list methods",
+      "Class        : Token name, Variable superclass, list methods",
       "Break        : ",
       "Expression   : Expr expression",
       "Function     : Token name, function function",

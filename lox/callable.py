@@ -39,9 +39,10 @@ class LoxFunction(LoxCallable):
         return LoxFunction(name, self.declaration, environment, self.is_initializer)
 
 class LoxClass(LoxCallable):
-    def __init__(self, name, methods):
+    def __init__(self, name, superclass, methods):
         self.name = name
         self.methods = methods
+        self.superclass = superclass
     def __str__(self):
         return self.name
 
@@ -61,6 +62,8 @@ class LoxClass(LoxCallable):
     def find_method(self, name):
         if name in self.methods:
             return self.methods[name]
+        if self.superclass is not None:
+            return self.superclass.find_method(name)
         return None
 
 class LoxInstance:

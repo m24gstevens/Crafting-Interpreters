@@ -204,12 +204,16 @@ class Parser:
     
     def class_declaration(self):
         name = self.consume(IDENTIFIER, "Expect class name.")
+        superclass = None
+        if self.match(LESS):
+            self.consume(IDENTIFIER, "Expect superclass name.")
+            superclass = Variable(self.previous())
         self.consume(LEFT_BRACE, "Expect '{' before class body.")
         methods = []
         while not self.check(RIGHT_BRACE) and not self.is_at_end():
             methods.append(self.function("method"))
         self.consume(RIGHT_BRACE, "Expect '}' after class body.")
-        return Class(name, methods)
+        return Class(name, superclass, methods)
     
     def equality(self):
         expr = self.comparison()
@@ -283,6 +287,11 @@ class Parser:
             return Literal(self.previous().literal)
         if self.match(FUN):
             return self.function_body("function")
+        if self.match(SUPER):
+            keyword = self.previous()
+            self.consume(DOT, "Expect '.' after 'super'.")
+            method = self.consume(IDENTIFIER, "Expect superclass method name.")
+            return Super(keyword, method)
         if self.match(THIS):
             return This(self.previous())
         if self.match(IDENTIFIER):

@@ -2,6 +2,7 @@ from collections import deque
 
 NONE = 0
 CLASS = 1
+SUBCLASS = 2
 FUNCTION = 1
 INITIALIZER = 2
 METHOD = 3
@@ -24,6 +25,19 @@ class Resolver:
         self.current_class = CLASS
         self.declare(stmt.name)
         self.define(stmt.name)
+
+        if stmt.superclass is not None and stmt.name.lexeme == stmt.superclass.name.lexeme:
+            from pylox import error
+            error(stmt.superclass.name, "A class can't inherit from itself.")
+        if stmt.superclass is not None:
+            self.resolve(stmt.superclass)
+        
+        if stmt.superclass is not None:
+            self.current_class = SUBCLASS
+            self.resolve(stmt.superclass)
+            self.begin_scope()
+            self.scopes[-1]["super"] = True
+
         self.begin_scope()
         self.scopes[-1]["this"] = True
         for method in stmt.methods:
@@ -31,6 +45,8 @@ class Resolver:
             if method.name.lexeme == "init":
                 declaration = INITIALIZER
             self.resolve_function(method.function, declaration)
+        self.end_scope()
+        if stmt.superclass is not None:
             self.end_scope()
         self.current_class = enclosing_class
         return None
@@ -120,6 +136,15 @@ class Resolver:
     def visitSetExpr(self, expr):
         self.resolve(expr.value)
         self.resolve(expr.object)
+        return None
+
+    def visitSuperExpr(self,expr):
+        from pylox import error
+        if self.current_class == NONE:
+            error(expr.keyword, "Can't use 'super' outside of a class.")
+        elif self.current_class != SUBCLASS:
+            error(expr.keyword, "Can't use 'super' in a class with no superclass.")
+        self.resolve_local(expr, expr.keyword)
         return None
 
     def visitThisExpr(self, expr):
