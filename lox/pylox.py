@@ -55,6 +55,6 @@ def error(token, message):
         report(token.line, " at '" + token.lexeme + "'", message)
 
 def runtimeError(error):
-    sys.stderr.write(str(error) + "\n[line " + error.token.line + "]")
+    sys.stderr.write(str(error) + "\n[line " + str(error.token.line) + "]")
     global had_runtime_error
     had_runtime_error = True

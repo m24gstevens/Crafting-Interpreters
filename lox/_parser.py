@@ -35,6 +35,8 @@ class Parser:
             return self.if_statement()
         if self.match(PRINT):
             return self.print_statement()
+        if self.match(RETURN):
+            return self.return_statement()
         if self.match(WHILE):
             return self.while_statement()
         if self.match(BREAK):
@@ -87,6 +89,14 @@ class Parser:
         value = self.expression()
         self.consume(SEMICOLON, "Expected ';' after value.")
         return Print(value)
+
+    def return_statement(self):
+        keyword = self.previous()
+        value = None
+        if not self.check(SEMICOLON):
+            value = self.expression()
+        self.consume(SEMICOLON, "Expect ';' after return value.")
+        return Return(keyword, value)
     
     def expression_statement(self):
         expr = self.expression()
@@ -158,8 +168,25 @@ class Parser:
     def expression(self):
         return self.assignment()
 
+    def function(self, kind):
+        name = self.consume(IDENTIFIER, f"Expect {kind} name.")
+        self.consume(LEFT_PAREN, f"Expect '(' after {kind} name.")
+        parameters = []
+        if not self.check(RIGHT_PAREN):
+            parameters.append(self.consume(IDENTIFIER, "Expect parameter name"))
+            while (self.match(COMMA)):
+                if len(parameters) >= 255:
+                    self.error(self.peek(), "Can't have more than 255 parameters.")
+                parameters.append(self.consume(IDENTIFIER, "Expect parameter name"))
+        self.consume(RIGHT_PAREN, "Expect ')' after parameters.")
+        self.consume(LEFT_BRACE, "Expect '{' before " + kind + " body")
+        body = self.block()
+        return Function(name, parameters, body)
+
     def declaration(self):
         try:
+            if self.match(FUN):
+                return self.function("function")
             if self.match(VAR):
                 return self.var_declaration()
             return self.statement()
@@ -203,8 +230,28 @@ class Parser:
         if self.match(BANG, MINUS):
             operator = self.previous()
             return Unary(operator, self.unary())
-        return self.primary()
+        return self.call()
+
+    def finish_call(self, callee):
+        arguments = []
+        if not self.check(RIGHT_PAREN):
+            arguments.append(self.expression())
+            while self.match(COMMA):
+                if len(arguments) >= 255:
+                    self.error(self.peek(), "Can't have more than 255 arguments")
+                arguments.append(self.expression())
+        paren = self.consume(RIGHT_PAREN, "Expect ')' after arguments.")
+        return Call(callee, paren, arguments)
     
+    def call(self):
+        expr = self.primary()
+        while 1:
+            if self.match(LEFT_PAREN):
+                expr = self.finish_call(expr)
+            else:
+                break
+        return expr
+
     def primary(self):
         if self.match(FALSE):
             return Literal(False)

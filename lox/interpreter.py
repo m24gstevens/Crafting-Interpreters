@@ -1,11 +1,20 @@
 from stmt import *
 from expr import *
+from callable import LoxCallable, LoxFunction
 import _token
 from environment import Environment
+from _return import ReturnJmp
+import time
 
 class Interpreter(Visitor):
     def __init__(self):
-        self.environment = Environment()
+        self.globals = Environment()
+        self.environment = self.globals
+        Clock = LoxCallable
+        Clock.arity = lambda : 0
+        Clock.call = lambda interpreter, arguments: float(time.time())
+        Clock.__str__ = lambda : "<native fn>"
+        self.globals.define("clock", Clock)
 
     def interpret(self, statements):
         from pylox import runtimeError
@@ -20,7 +29,7 @@ class Interpreter(Visitor):
         try:
             value = self.evaluate(expr)
             return self.stringify(value)
-        except LoxRuntimeError.RuntimeError as error:
+        except LoxRuntimeError as error:
             from pylox import runtimeError
             runtimeError(error)
             return None
@@ -58,6 +67,11 @@ class Interpreter(Visitor):
         self.evaluate(stmt.expression)
         return None
 
+    def visitFunctionStmt(self, stmt):
+        function = LoxFunction(stmt, self.environment)
+        self.environment.define(stmt.name.lexeme, function)
+        return None
+
     def visitIfStmt(self, stmt):
         if self.is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.then_branch)
@@ -69,6 +83,12 @@ class Interpreter(Visitor):
         value = self.evaluate(stmt.expression)
         print(self.stringify(value))
         return None
+
+    def visitReturnStmt(self, stmt):
+        value = None
+        if stmt.value is not None:
+            value = self.evaluate(stmt.value)
+        raise ReturnJmp(value)
 
     def visitVarStmt(self, stmt):
         value = None
@@ -135,7 +155,7 @@ class Interpreter(Visitor):
                 return float(left) + float(right)
             if isinstance(left, str) and isinstance(right, str):
                 return str(left) + str(right)
-            raise LoxRuntimeError.RuntimeError(type, "Operands must be two numbers or two strings")
+            raise LoxRuntimeError(type, "Operands must be two numbers or two strings")
         elif type == _token.SLASH:
             self.check_number_operands(type, left, right)
             return float(left) / float(right)
@@ -159,6 +179,18 @@ class Interpreter(Visitor):
         elif type == _token.BANG_EQUAL:
             return not self.is_equal(left, right)
 
+    def visitCallExpr(self, expr):
+        callee = self.evaluate(expr.callee)
+        arguments = []
+        for argument in expr.arguments:
+            arguments.append(self.evaluate(argument))
+        if not isinstance(callee, LoxCallable):
+            raise LoxRuntimeError(expr.paren, "Can only call functions and classes")
+        if len(arguments) != callee.arity():
+            raise LoxRuntimeError(expr.paren, f"Expected {callee.arity()} arguments but got {len(arguments)}.")
+        return callee.call(self, arguments)
+        
+
     def is_truthy(self, object):
         if object is None:
             return False
@@ -176,18 +208,18 @@ class Interpreter(Visitor):
     def check_number_operand(self, operator, operand):
         if isinstance(operand, float):
             return
-        raise LoxRuntimeError.RuntimeError(operator, "Operand must be a number")
+        raise LoxRuntimeError(operator, "Operand must be a number")
     
     
     def check_number_operands(self, operator, left, right):
         if isinstance(left, float) and isinstance(right, float):
             return
-        raise LoxRuntimeError.RuntimeError(operator, "Operands must be a number")
+        raise LoxRuntimeError(operator, "Operands must be a number")
 
 class LoxRuntimeError(RuntimeError):
-    def RuntimeError(self,token,message):
-        super(message)
+    def __init__(self, token, message):
+        super().__init__(message)
         self.token = token
 
-class BreakException(RuntimeError):
+class BreakException(Exception):
     pass

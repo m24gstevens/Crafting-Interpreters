@@ -13,7 +13,7 @@ class Environment:
             return self.enclosing.get(name)
         
         from interpreter import LoxRuntimeError
-        raise LoxRuntimeError.RuntimeError(name, f"Undefined variable '{name.lexeme}'.")
+        raise LoxRuntimeError(name, f"Undefined variable '{name.lexeme}'.")
 
     def assign(self, name, value):
         if name.lexeme in self.values.keys():
@@ -24,4 +24,4 @@ class Environment:
             return
         
         from interpreter import LoxRuntimeError
-        raise LoxRuntimeError.RuntimeError(name, f"Undefined variable '{name.lexeme}'.")
+        raise LoxRuntimeError(name, f"Undefined variable '{name.lexeme}'.")

@@ -25,6 +25,15 @@ class Expression(Stmt):
 	def accept(self, visitor):
 		return visitor.visitExpressionStmt(self)
 
+class Function(Stmt):
+	def __init__(self,name,params,body):
+		self.name = name
+		self.params = params
+		self.body = body
+
+	def accept(self, visitor):
+		return visitor.visitFunctionStmt(self)
+
 class If(Stmt):
 	def __init__(self,condition,then_branch,else_branch):
 		self.condition = condition
@@ -40,6 +49,14 @@ class Print(Stmt):
 
 	def accept(self, visitor):
 		return visitor.visitPrintStmt(self)
+
+class Return(Stmt):
+	def __init__(self,keyword,value):
+		self.keyword = keyword
+		self.value = value
+
+	def accept(self, visitor):
+		return visitor.visitReturnStmt(self)
 
 class Var(Stmt):
 	def __init__(self,name,initializer):
