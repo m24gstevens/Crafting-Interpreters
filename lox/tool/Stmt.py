@@ -1,3 +1,4 @@
+from pylox import *
 class Stmt:
 	pass
 

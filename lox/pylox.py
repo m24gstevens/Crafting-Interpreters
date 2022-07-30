@@ -3,6 +3,7 @@ from _token import Scanner, EOF
 from _parser import Parser
 from ast_printer import AstPrinter
 from interpreter import Interpreter
+from expr import Expr
 
 had_error = False
 had_runtime_error = False
@@ -17,13 +18,22 @@ def run_file(file):
         sys.exit(3)
 
 def run_prompt():
+    global had_error
     while 1:
-        line = input("> ")
-        if not line:
-            break
-        run(line)
-        global had_error
         had_error = False
+        line = input("> ")
+        scanner = Scanner(line)
+        tokens = scanner.scan_tokens()
+        parser = Parser(tokens)
+        syntax = parser.parse_repl()
+        if had_error:
+            continue    # Ignore syntax errors
+        if isinstance(syntax, list):
+            interpreter.interpret(syntax)
+        elif isinstance(syntax, Expr):
+            result = interpreter.interpret_expr(syntax)
+            if result is not None:
+                print(f"= {result}")
 
 
 def run(source):

@@ -5,14 +5,22 @@ def main():
         sys.exit(1)
     output_dir = sys.argv[1]
     define_ast(output_dir, "Expr", [
+      "Assign   : Token name, Expr value",
       "Binary   : Expr left, Token operator, Expr right",
       "Grouping : Expr expression",
       "Literal  : Object value",
-      "Unary    : Token operator, Expr right"
+      "Logical  : Expr left, Token operator, Expr right",
+      "Unary    : Token operator, Expr right",
+      "Variable : Token name"
     ])
     define_ast(output_dir, "Stmt", [
+      "Block        : list statements",
+      "Break        : ",
       "Expression   : Expr expression",
-      "Print        : Expr expression"
+      "If           : Expr condition, Stmt then_branch, Stmt else_branch",
+      "Print        : Expr expression",
+      "Var          : Token name, Expr initializer",
+      "While        : Expr condition, Stmt body"
     ])
 
 def define_ast(output_dir, base_name, types):
@@ -34,10 +42,15 @@ def define_ast(output_dir, base_name, types):
 
 def define_type(file, base_name, class_name, field_list):
     print(f"class {class_name}({base_name}):", file=file)
-    fields = list(map(lambda s: s.split()[1],field_list.split(',')))
+    if field_list == "":
+        fields = []
+    else:
+        fields = list(map(lambda s: s.split()[1],field_list.split(',')))
     print(f"\tdef __init__(self,{','.join(fields)}):", file=file)
     for field in fields:
         print(f"\t\tself.{field} = {field}", file=file)
+    if len(fields) == 0:
+        print("\tpass", file=file)
     print("", file=file)
     print("\tdef accept(self, visitor):", file=file)
     print(f"\t\treturn visitor.visit{class_name}{base_name}(self)",file=file)

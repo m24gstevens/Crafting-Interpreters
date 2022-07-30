@@ -1,8 +1,12 @@
-from pandas import value_counts
+from stmt import *
 from expr import *
 import _token
+from environment import Environment
 
 class Interpreter(Visitor):
+    def __init__(self):
+        self.environment = Environment()
+
     def interpret(self, statements):
         from pylox import runtimeError
         try:
@@ -11,11 +15,30 @@ class Interpreter(Visitor):
         except LoxRuntimeError as error: 
             runtimeError(error)
 
+    # For the "shell-like" interpreter
+    def interpret_expr(self, expr):
+        try:
+            value = self.evaluate(expr)
+            return self.stringify(value)
+        except LoxRuntimeError.RuntimeError as error:
+            from pylox import runtimeError
+            runtimeError(error)
+            return None
+
     def evaluate(self, expr):
         return expr.accept(self)
     
     def execute(self, stmt):
         stmt.accept(self)
+
+    def execute_block(self, statements, environment):
+        previous = self.environment
+        try:
+            self.environment = environment
+            for statement in statements:
+                self.execute(statement)
+        finally:
+            self.environment = previous
 
     def stringify(self, ob):
         if ob is None:
@@ -27,8 +50,19 @@ class Interpreter(Visitor):
             return text
         return str(ob)
 
+    def visitBlockStmt(self,stmt):
+        self.execute_block(stmt.statements, Environment(self.environment))
+        return None
+
     def visitExpressionStmt(self,stmt):
         self.evaluate(stmt.expression)
+        return None
+
+    def visitIfStmt(self, stmt):
+        if self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.then_branch)
+        elif stmt.else_branch is not None:
+            self.execute(stmt.else_branch)
         return None
 
     def visitPrintStmt(self, stmt):
@@ -36,8 +70,42 @@ class Interpreter(Visitor):
         print(self.stringify(value))
         return None
 
+    def visitVarStmt(self, stmt):
+        value = None
+        if stmt.initializer != None:
+            value = self.evaluate(stmt.initializer)
+        self.environment.define(stmt.name.lexeme, value)
+        return None
+
+    def visitWhileStmt(self, stmt):
+        try:
+            while(self.is_truthy(self.evaluate(stmt.condition))):
+                self.execute(stmt.body)
+        except BreakException:
+            pass
+        return None
+
+    def visitBreakStmt(self, stmt):
+        raise BreakException()
+
+    def visitAssignExpr(self, expr):
+        value = self.evaluate(expr.value)
+        self.environment.assign(expr.name, value)
+        return value
+
     def visitLiteralExpr(self, expr):
         return expr.value
+
+    def visitLogicalExpr(self, expr):
+        left = self.evaluate(expr.left)
+        if expr.operator.type == _token.OR:
+            if self.is_truthy(left):
+                return left
+        else:
+            if not self.is_truthy(left):
+                return left
+        return self.evaluate(expr.right)
+
     
     def visitGroupingExpr(self, expr):
         return self.evaluate(expr.expression)
@@ -51,6 +119,9 @@ class Interpreter(Visitor):
         elif type == _token.BANG:
             return not self.is_truthy(right)
         return None
+
+    def visitVariableExpr(self, expr):
+        return self.environment.get(expr.name)
 
     def visitBinaryExpr(self, expr):
         left = self.evaluate(expr.left)
@@ -117,3 +188,6 @@ class LoxRuntimeError(RuntimeError):
     def RuntimeError(self,token,message):
         super(message)
         self.token = token
+
+class BreakException(RuntimeError):
+    pass
