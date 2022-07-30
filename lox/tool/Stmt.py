@@ -11,6 +11,14 @@ class Block(Stmt):
 	def accept(self, visitor):
 		return visitor.visitBlockStmt(self)
 
+class Class(Stmt):
+	def __init__(self,name,methods):
+		self.name = name
+		self.methods = methods
+
+	def accept(self, visitor):
+		return visitor.visitClassStmt(self)
+
 class Break(Stmt):
 	def __init__(self):
 		pass

@@ -1,15 +1,38 @@
 from collections import deque
 
+NONE = 0
+CLASS = 1
+FUNCTION = 1
+INITIALIZER = 2
+METHOD = 3
+
 class Resolver:
     def __init__(self, interpreter):
         self.interpreter = interpreter
         self.scopes = deque()   # A generalized stack - We use append to push and pop to pop
-        self.current_function = 0
+        self.current_function = NONE
+        self.current_class = NONE
     
     def visitBlockStmt(self, stmt):
         self.begin_scope()
         self.resolve(stmt.statements)
         self.end_scope()
+        return None
+
+    def visitClassStmt(self, stmt):
+        enclosing_class = self.current_class
+        self.current_class = CLASS
+        self.declare(stmt.name)
+        self.define(stmt.name)
+        self.begin_scope()
+        self.scopes[-1]["this"] = True
+        for method in stmt.methods:
+            declaration = METHOD     # Method type
+            if method.name.lexeme == "init":
+                declaration = INITIALIZER
+            self.resolve_function(method.function, declaration)
+            self.end_scope()
+        self.current_class = enclosing_class
         return None
 
     def visitExpressionStmt(self, stmt):
@@ -42,6 +65,9 @@ class Resolver:
             from pylox import error
             error(stmt.keyword, "Can't return from top level code.")
         if stmt.value is not None:
+            if self.current_function == INITIALIZER:
+                from pylox import error
+                error(stmt.keyword, "Can't return a value from an initializer.")
             self.resolve(stmt.value)
         return None
 
@@ -75,6 +101,10 @@ class Resolver:
             self.resolve(arg)
         return None
 
+    def visitGetExpr(self, expr):
+        self.resolve(expr.object)
+        return None
+
     def visitGroupingExpr(self, expr):
         self.resolve(expr.expression)
         return None
@@ -85,6 +115,19 @@ class Resolver:
     def visitLogicalExpr(self, expr):
         self.resolve(expr.left)
         self.resolve(expr.right)
+        return None
+
+    def visitSetExpr(self, expr):
+        self.resolve(expr.value)
+        self.resolve(expr.object)
+        return None
+
+    def visitThisExpr(self, expr):
+        if self.current_class == NONE:
+            # No current class
+            from pylox import error
+            error(expr.keyword, "Can't use 'this' outside of a class.")
+        self.resolve_local(expr, expr.keyword)
         return None
 
     def visitUnaryExpr(self, expr):

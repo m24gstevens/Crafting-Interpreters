@@ -29,6 +29,30 @@ class Call(Expr):
 	def accept(self, visitor):
 		return visitor.visitCallExpr(self)
 
+class Get(Expr):
+	def __init__(self,object,name):
+		self.object = object
+		self.name = name
+
+	def accept(self, visitor):
+		return visitor.visitGetExpr(self)
+
+class Set(Expr):
+	def __init__(self,object,name,value):
+		self.object = object
+		self.name = name
+		self.value = value
+
+	def accept(self, visitor):
+		return visitor.visitSetExpr(self)
+
+class This(Expr):
+	def __init__(self,keyword):
+		self.keyword = keyword
+
+	def accept(self, visitor):
+		return visitor.visitThisExpr(self)
+
 class Grouping(Expr):
 	def __init__(self,expression):
 		self.expression = expression

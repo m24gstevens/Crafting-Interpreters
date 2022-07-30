@@ -1,10 +1,8 @@
-var a = "global";
-{
-  fun showA() {
-    print a;
+class Egotist {
+  speak() {
+    print this;
   }
-
-  showA();
-  var a = "block";
-  showA();
 }
+
+var method = Egotist().speak;
+method();

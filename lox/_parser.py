@@ -121,6 +121,8 @@ class Parser:
             if isinstance(expr, Variable):
                 name = expr.name
                 return Assign(name, value)
+            elif isinstance(expr, Get):
+                return Set(expr.object, expr.name, value)
             self.error(equals, "Invalid assignment target.")
         return expr
 
@@ -188,6 +190,8 @@ class Parser:
 
     def declaration(self):
         try:
+            if self.match(CLASS):
+                return self.class_declaration()
             if self.check(FUN) and self.check_next(IDENTIFIER):
                 self.consume(FUN, None)
                 return self.function("function")
@@ -197,6 +201,15 @@ class Parser:
         except ParseError:
             self.synchronize()
             return None
+    
+    def class_declaration(self):
+        name = self.consume(IDENTIFIER, "Expect class name.")
+        self.consume(LEFT_BRACE, "Expect '{' before class body.")
+        methods = []
+        while not self.check(RIGHT_BRACE) and not self.is_at_end():
+            methods.append(self.function("method"))
+        self.consume(RIGHT_BRACE, "Expect '}' after class body.")
+        return Class(name, methods)
     
     def equality(self):
         expr = self.comparison()
@@ -252,6 +265,9 @@ class Parser:
         while 1:
             if self.match(LEFT_PAREN):
                 expr = self.finish_call(expr)
+            elif self.match(DOT):
+                name = self.consume(IDENTIFIER, "Expect property name after '.'.")
+                expr = Get(expr, name)
             else:
                 break
         return expr
@@ -267,6 +283,8 @@ class Parser:
             return Literal(self.previous().literal)
         if self.match(FUN):
             return self.function_body("function")
+        if self.match(THIS):
+            return This(self.previous())
         if self.match(IDENTIFIER):
             return Variable(self.previous())
         if self.match(LEFT_PAREN):

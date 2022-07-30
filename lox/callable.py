@@ -5,10 +5,11 @@ class LoxCallable:
     pass
 
 class LoxFunction(LoxCallable):
-    def __init__(self, name, decl, closure):
+    def __init__(self, name, decl, closure, is_initializer):
         self.name = name
         self.closure = closure
         self.declaration = decl
+        self.is_initializer = is_initializer
 
     def call(self, interpreter, arguments):
         environment = Environment(self.closure)
@@ -17,7 +18,11 @@ class LoxFunction(LoxCallable):
         try:
             interpreter.execute_block(self.declaration.body, environment)
         except ReturnJmp as r:
+            if self.is_initializer:
+                return self.closure.get_at(0, "this")
             return r.value
+        if self.is_initializer:
+            return self.closure.get_at(0, "this")
         return None
 
     def arity(self):
@@ -27,3 +32,52 @@ class LoxFunction(LoxCallable):
         if self.name is None:
             return "<fn>"
         return "<fn " + self.name + ">"
+
+    def bind(self, instance, name):
+        environment = Environment(self.closure)
+        environment.define("this", instance)
+        return LoxFunction(name, self.declaration, environment, self.is_initializer)
+
+class LoxClass(LoxCallable):
+    def __init__(self, name, methods):
+        self.name = name
+        self.methods = methods
+    def __str__(self):
+        return self.name
+
+    def call(self, interpreter, arguments):
+        instance = LoxInstance(self)
+        initializer = self.find_method("init")
+        if initializer is not None:
+            initializer.bind(instance, "init").call(interpreter, arguments)
+        return instance
+
+    def arity(self):
+        initializer = self.find_method("init")
+        if initializer is None:
+            return 0
+        return initializer.arity()
+
+    def find_method(self, name):
+        if name in self.methods:
+            return self.methods[name]
+        return None
+
+class LoxInstance:
+    def __init__(self, klass):
+        self.klass = klass
+        self.fields = {}
+    def __str__(self):
+        return self.klass.name + " instance"
+    def get(self,name):
+        if name.lexeme in self.fields:
+            return self.fields.get(name.lexeme)
+        method = self.klass.find_method(name.lexeme)
+        if method is not None:
+            return method.bind(self, name.lexeme)
+        from interpreter import LoxRuntimeError
+        raise LoxRuntimeError(name, f"Undefined property {name.lexeme}.")
+
+    def set(self, name, value):
+        self.fields[name.lexeme] = value
+    

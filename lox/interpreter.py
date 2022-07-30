@@ -1,6 +1,7 @@
+from callable import LoxInstance
 from stmt import *
 from expr import *
-from callable import LoxCallable, LoxFunction
+from callable import LoxCallable, LoxFunction, LoxClass, LoxInstance
 import _token
 from environment import Environment
 from _return import ReturnJmp
@@ -67,17 +68,27 @@ class Interpreter(Visitor):
         self.execute_block(stmt.statements, Environment(self.environment))
         return None
 
+    def visitClassStmt(self, stmt):
+        self.environment.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            fn = LoxFunction(method.name, method.function, self.environment, method.name.lexeme == "init")
+            methods[method.name.lexeme] = fn
+        klass = LoxClass(stmt.name.lexeme, methods)
+        self.environment.assign(stmt.name, klass)
+        return None
+
     def visitExpressionStmt(self,stmt):
         self.evaluate(stmt.expression)
         return None
 
     def visitFunctionStmt(self, stmt):
         fn_name = stmt.name.lexeme
-        self.environment.define(fn_name, LoxFunction(fn_name, stmt.function, self.environment))
+        self.environment.define(fn_name, LoxFunction(fn_name, stmt.function, self.environment, False))
         return None
     
     def visitFunctionExpressionExpr(self, expr):      # Allow Lambdas
-        return LoxFunction(None, expr, self.environment)
+        return LoxFunction(None, expr, self.environment, False)
 
     def visitIfStmt(self, stmt):
         if self.is_truthy(self.evaluate(stmt.condition)):
@@ -137,6 +148,16 @@ class Interpreter(Visitor):
                 return left
         return self.evaluate(expr.right)
 
+    def visitSetExpr(self, expr):
+        obj = self.evaluate(expr.object)
+        if not isinstance(obj, LoxInstance):
+            raise LoxRuntimeError(expr.name, "Only instances have fields.")
+        value = self.evaluate(expr.value)
+        obj.set(expr.name, value)
+        return value
+
+    def visitThisExpr(self, expr):
+        return self.look_up_variable(expr.keyword, expr)
     
     def visitGroupingExpr(self, expr):
         return self.evaluate(expr.expression)
@@ -207,7 +228,12 @@ class Interpreter(Visitor):
         if len(arguments) != callee.arity():
             raise LoxRuntimeError(expr.paren, f"Expected {callee.arity()} arguments but got {len(arguments)}.")
         return callee.call(self, arguments)
-        
+
+    def visitGetExpr(self, expr):
+        object = self.evaluate(expr.object)
+        if isinstance(object, LoxInstance):
+            return object.get(expr.name)
+        raise LoxRuntimeError(expr.name, "Only  instances have properties.")    
 
     def is_truthy(self, object):
         if object is None:
